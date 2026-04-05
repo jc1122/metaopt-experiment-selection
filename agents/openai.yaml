@@ -1,0 +1,10 @@
+interface:
+  display_name: "Metaopt Experiment Selection"
+  short_description: "Rank proposals and select the winning experiment for metaoptimization campaigns"
+  categories:
+    - ml
+    - research
+  default_prompt: >
+    Rank the current proposal pool and select exactly one winning proposal
+    for the next experiment iteration. Justify the selection with reference
+    to baselines, prior learnings, and expected impact.
