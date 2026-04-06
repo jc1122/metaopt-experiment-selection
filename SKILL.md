@@ -18,12 +18,24 @@ This skill is a leaf worker operating in the **synthesis** auxiliary lane. It re
 
 The orchestrator provides the following via the subagent prompt:
 
+### Standard Envelope (provided by orchestrator on every dispatch)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `campaign_id` | string | Campaign identifier |
+| `current_iteration` | integer | Current iteration number |
+| `slot_id` | string | The slot ID dispatching this worker |
+| `attempt` | integer | Attempt number for this dispatch (1-indexed) |
+
+### Campaign Context
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `goal` | string | The campaign's optimization goal |
 | `metric` | string | The target metric name (e.g. `val_loss`, `accuracy`) |
 | `direction` | `"minimize"` or `"maximize"` | Whether lower or higher metric values are better |
-| `aggregation` | string | How per-dataset scores roll up into the aggregate (e.g. `mean`, `weighted_mean`) |
+| `aggregation_method` | string | How per-dataset scores roll up into the aggregate (e.g. `mean`, `weighted_mean`) |
+| `aggregation_weights` | object or null | Per-dataset weights when method is `weighted_mean`; `null` otherwise |
 | `aggregate_baseline` | number | The current authoritative aggregate campaign score |
 | `per_dataset_baselines` | object | Map of dataset IDs to their current numeric baseline values |
 | `current_proposals` | array | The frozen pool of candidate proposals eligible for selection |
@@ -31,10 +43,18 @@ The orchestrator provides the following via the subagent prompt:
 | `completed_experiments` | array | Prior experiments with their outcomes and deltas |
 | `proposal_policy` | object | Policy constraints governing proposal eligibility and selection |
 
-Each proposal in `current_proposals` is an object containing at minimum:
-- `proposal_id`: non-empty string identifier
-- `title`: short description of the proposed change
+Each proposal in `current_proposals` is a full proposal record containing:
+
+**Orchestrator-owned fields:**
+- `proposal_id`: non-empty string, unique within the campaign
+- `source_slot_id`: non-empty string identifying the originating slot
+- `creation_iteration`: positive integer
+- `created_at`: ISO 8601 timestamp
+
+**Worker-provided fields:**
+- `title`: concise name (≤ 12 words)
 - `rationale`: why this change is expected to improve the metric
+- `expected_impact`: object with `direction` and `magnitude`
 - `target_area`: what part of the system the proposal modifies
 
 ## Output Contract
@@ -82,7 +102,7 @@ Each entry in `ranked_candidates` contains:
 
 8. **Respect direction.** When evaluating expected impact, use `objective.direction` to determine whether improvement means increasing or decreasing the metric.
 
-9. **Use aggregation rules.** When reasoning about multi-dataset impact, apply the campaign's `objective.aggregation` method rather than ad-hoc comparison.
+9. **Use aggregation rules.** When reasoning about multi-dataset impact, apply `aggregation_method` (and `aggregation_weights` when applicable) rather than ad-hoc comparison.
 
 10. **Consider proposal diversity.** When two proposals have similar expected impact, prefer the one exploring a less-tested hypothesis to maximize information gain.
 
@@ -97,7 +117,7 @@ Each entry in `ranked_candidates` contains:
 | Generating new proposal ideas during selection | The pool is frozen — select only from what is provided |
 | Providing a vague rationale like "this seems promising" | Reference specific baselines, deltas, learnings, or experiment outcomes |
 | Ignoring per-dataset baselines | Identify which datasets have the most room for improvement |
-| Comparing raw per-dataset scores without applying aggregation rules | Use `objective.aggregation` to evaluate expected aggregate impact |
+| Comparing raw per-dataset scores without applying aggregation rules | Use `aggregation_method` and `aggregation_weights` to evaluate expected aggregate impact |
 | Selecting a low-risk incremental proposal when large gaps remain | Prefer proposals targeting the largest remaining improvement opportunity |
 
 ## References
