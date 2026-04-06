@@ -102,6 +102,8 @@ Each entry in `ranked_candidates` contains:
 
 8. **Respect direction.** When evaluating expected impact, use `objective.direction` to determine whether improvement means increasing or decreasing the metric.
 
+   > Note: `objective.direction` (from the campaign config) uses `"maximize"` or `"minimize"`. The `expected_impact.direction` field in the proposal schema uses `"improve"`, `"neutral"`, or `"worsen"` — these are different field systems. When evaluating proposals, map `"maximize"` → prefer `expected_impact.direction == "improve"` and vice versa.
+
 9. **Use aggregation rules.** When reasoning about multi-dataset impact, apply `aggregation_method` (and `aggregation_weights` when applicable) rather than ad-hoc comparison.
 
 10. **Consider proposal diversity.** When two proposals have similar expected impact, prefer the one exploring a less-tested hypothesis to maximize information gain.
